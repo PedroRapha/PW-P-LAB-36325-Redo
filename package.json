@@ -1,0 +1,23 @@
+{
+  "name": "pw-p-lab-36325-redo",
+  "version": "1.0.0",
+  "description": "API REST - Programação Web",
+  "homepage": "https://github.com/PedroRapha/PW-P-LAB-36325-Redo#readme",
+  "bugs": {
+    "url": "https://github.com/PedroRapha/PW-P-LAB-36325-Redo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PedroRapha/PW-P-LAB-36325-Redo.git"
+  },
+  "license": "ISC",
+  "keywords": ["api", "express", "node"],
+  "author": "Pedro Raphael Paiva",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  }
+}
