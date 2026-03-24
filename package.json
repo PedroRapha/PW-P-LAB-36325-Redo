@@ -11,7 +11,11 @@
     "url": "git+https://github.com/PedroRapha/PW-P-LAB-36325-Redo.git"
   },
   "license": "ISC",
-  "keywords": ["api", "express", "node"],
+  "keywords": [
+    "api",
+    "express",
+    "node"
+  ],
   "author": "Pedro Raphael Paiva",
   "type": "commonjs",
   "main": "server.js",

@@ -107,7 +107,7 @@ let movies = [ { id: 1, title: "Inception", year: 2010 }, { id: 2, title: "Inter
 
 app.get("/movies", (req, res) => {
     res.status(200).json({ data: movies });
-})
+});
 
 //GET - obter um
 
@@ -120,7 +120,7 @@ app.get("/movies/:id", (req, res) => {
     }
 
     res.status(200).json({ data: movie });
-})
+});
 
 //POST - Criar
 
@@ -202,9 +202,31 @@ app.get("/tasks", (req, res) => {
         return res.status(400).json({ message: "O parâmetro do query só pode ser 'true' ou 'false'"});
     }
 
-    const filteredTasks = tasks.filter((findTasks) => findTasks.completed === "true");
+    const filteredTasks = tasks.filter((findTask) => findTask.completed === (completed === "true"));
 
     res.status(200).json({ data: filteredTasks });
+});
+
+//GET stats
+
+app.get("/tasks/stats", (req,res) => {
+    const stats = {
+        numTasks: 0,
+        completedTasks: 0,
+        incompleteTasks: 0
+    };
+
+    for(let i = 0; i < tasks.length; i++){
+        stats.numTasks++;
+
+        if(tasks[i].completed === true){
+            stats.completedTasks++;
+        } else {
+            stats.incompleteTasks++;
+        }
+    }
+
+    res.status(200).json({ data: stats });
 });
 
 //GET - mostra um
@@ -220,6 +242,89 @@ app.get("/tasks/:id", (req, res) => {
     res.status(200).json({ data: task});
 });
 
+//POST - cria tarefa
+
+app.post("/tasks", (req, res) => {
+    const { title, priority } = req.body;
+
+    if(!title || !priority) {
+        return res.status(400).json({ message: "Os campos 'title' e 'priority' são obrigatórios"});
+    }
+
+    if(priority !== "low" && priority !== "medium" && priority !== "high") {
+        return res.status(400).json({ message: "O campo 'priority' só pode receber 'low', 'medium' ou 'high'"});
+    }
+
+    const newTask = {
+        id: tasks.length > 0 ? tasks[tasks.length - 1].id + 1 : 1,
+        title,
+        completed: false,
+        priority
+    };
+    tasks.push(newTask);
+
+    res.status(201).json({ data: newTask });
+});
+
+//PUT - atualiza
+
+app.put("/tasks/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = tasks.findIndex((findTask) => findTask.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ message: "Tarefa não encontrada" });
+    }
+
+    const { title, priority } = req.body;
+
+    if(!title || !priority) {
+        return res.status(400).json({ message: "Os campos 'title' e 'priority' são obrigatórios"});
+    }
+
+    if(priority !== "low" && priority !== "medium" && priority !== "high"){
+        return res.status(400).json({ message: "O campo 'priority' só pode receber 'low', 'medium' ou 'high'" });
+    }
+
+    tasks[index] = {
+        id,
+        title,
+        completed: tasks[index].completed,
+        priority
+    };
+
+    res.status(200).json({ data: tasks[index] });
+});
+
+//PATCH - alterna estado
+
+app.patch("/tasks/:id/toggle", (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = tasks.findIndex((findTask) => findTask.id === id);
+
+    if(index === -1) {
+        return res.status(404).json({ message: "Tarefa não encontrada" });
+    }
+
+    tasks[index].completed = !tasks[index].completed;
+
+    res.status(200).json({ data: tasks[index] });
+});
+
+//DELETE - apaga
+
+app.delete("/tasks/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = tasks.findIndex((findTask) => findTask.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ message: "Tarefa não encontrada" });
+    }
+
+    tasks.splice(index, 1);
+
+    res.status(200).json({ message: "Tarefa eliminada com sucesso" });
+});
 
 
 
