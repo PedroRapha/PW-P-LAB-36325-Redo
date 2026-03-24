@@ -328,6 +328,72 @@ app.delete("/tasks/:id", (req, res) => {
 
 
 
+
+
+
+
+
+
+
+/*  ----------------------------------
+    --LAB-3 -- API Gestão de Tarefas com Prisma--
+    ----------------------------------
+*/
+
+const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require("@prisma/adapter-pg");
+
+const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+});
+
+const prisma = new PrismaClient({ adapter });
+
+//GET - listar todas
+
+app.get("/prisma/tasks", async (req, res) => {
+    const tasks = await prisma.task.findMany();
+    res.status(200).json(tasks);
+});
+
+//GET - listar uma
+
+app.get("/prisma/tasks", async (req, res) => {
+    const task = await prisma.task.findUnique({
+        where: { id: req.params.id },
+    });
+    res.status(200).json(task);
+});
+
+//POST - criar
+
+app.post("/prisma/tasks", async (req, res) => {
+    const { title, description } = req.body;
+    const newTask = await prisma.task.create({ data: { title, description },
+    });
+    res.status(201).json(newTask);
+})
+
+//PUT - atualizar
+
+app.put("/prisma/tasks/:id", async (req, res) => {
+    const { title, description, completed } = req.body;
+    const updatedTask = await prisma.task.update({
+        where: { id: req.params.id },
+        data: { title, description, completed },
+    });
+    res.status(200).json(updatedTask);
+})
+
+//DELETE - apagar
+
+app.delete("/prisma/tasks/:id", async (req, res) => {
+    await prisma.task.delete({
+        where: { id: req.params.id },
+    });
+    res.status(204).send();
+})
+
 //Middleware de Erros
 app.use((req,res) => {
     res.status(404).json({ message: "Rota não encontrada" });
