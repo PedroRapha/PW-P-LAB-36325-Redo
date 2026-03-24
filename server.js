@@ -1,4 +1,4 @@
-requestAnimationFrame("dotenv").config();
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
@@ -14,7 +14,8 @@ const PORT = process.env.SERVER_PORT || 3000;
 
 /*  ----------------------------------
     ------EXEMPLO - CRUD com Mock-----
-    ---------------------------------- */
+    ----------------------------------
+*/
 
 let users = [
     { id: 1, name: "Ana", email: "ana@email.com" },
@@ -30,7 +31,7 @@ app.get("/users", (req, res)=> {
 //GET - obter um
 
 app.get("/users/:id", (req, res) => {
-    const id = parseInt(req.params.ud);
+    const id = parseInt(req.params.id);
     const user = users.find((u) => u.id === id);
 
     if(!user) {
@@ -38,14 +39,14 @@ app.get("/users/:id", (req, res) => {
     }
 
     res.status(200).json({ data: user });
-})
+});
 
 //POST - Criar
 app.post("/users", (req, res) => {
     const { name, email } = req.body;
 
     //validação
-    if (!name || email) {
+    if (!name || !email) {
         return res.status(400).json({ message: "Campos 'name' e 'email' são obrigatórios" });
     }
 
@@ -66,17 +67,159 @@ app.put("/users/:id", (req, res) => {
     const index = users.findIndex((u) => u.id === id);
 
     if (index === -1) {
-        return res.status(404).json({ message: "Utilizador não encontrado" }),
+        return res.status(404).json({ message: "Utilizador não encontrado" });
     }
 
     const { name, email} = req.body;
 
     if(!name || !email) {
-        return res.status(400).json({ message: "camos 'name' e 'email' são obrigatórios" });
+        return res.status(400).json({ message: "Campos 'name' e 'email' são obrigatórios" });
     }
+
+    users[index] = { id, name, email };
+    res.status(200).json({ data: users[index] });
 });
 
 //DELETE - Apagar
+
+app.delete("/users/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = users.findIndex((u) => u.id === id);
+    if (index === -1) {
+        return res.status(404).json({ message: "Utilizador não encontrado" });
+    }
+
+    users.splice(index, 1);
+    res.status(200).json({ message: "Utilizador eliminado com sucesso" });
+});
+
+
+
+
+/*  ----------------------------------
+    --LAB-1 -- API Gestão de Filmes---
+    ----------------------------------
+*/
+
+let movies = [ { id: 1, title: "Inception", year: 2010 }, { id: 2, title: "Interstellar", year: 2014 } ];
+
+//GET - listar todos
+
+app.get("/movies", (req, res) => {
+    res.status(200).json({ data: movies });
+})
+
+//GET - obter um
+
+app.get("/movies/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const movie = movies.find((findMovie) => findMovie.id === id);
+
+    if(!movie) {
+        return res.status(404).json({ message: "Filme não encontrado" });
+    }
+
+    res.status(200).json({ data: movie });
+})
+
+//POST - Criar
+
+app.post("/movies", (req, res) => {
+    const { title, year } = req.body;
+
+    if (!title || !year) {
+        return res.status(400).json({ message: "Campos 'title' e 'year' são obrigatórios" })
+    }
+
+    const newMovie = {
+        id: movies.length > 0 ? movies[movies.length - 1].id + 1 : 1,
+        title,
+        year
+    }
+
+    movies.push(newMovie);
+    res.status(201).json({ data: newMovie });
+});
+
+//PUT - Atualizar
+
+app.put("/movies/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = movies.findIndex((findMovie) => findMovie.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ message: "Filme não encontrado"});
+    }
+
+    const { title, year} = req.body;
+
+    if (!title || !year) {
+        return res.status(400).json({ message: "Campos 'title' e 'year' são obrigatórios"});
+    }
+
+    movies[index] = { id, title, year };
+    res.status(200).json({ data: movies[index] });
+})
+
+//DELETE - Apagar
+
+app.delete("/movies/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const index = movies.findIndex((findMovie) => findMovie.id === id);
+
+    if (index === -1) {
+        return res.status(404).json({ message: "Filme não encontrado" });
+    }
+
+    movies.splice(index, 1);
+    res.status(200).json({ message: "Filme eliminado com sucesso" });
+})
+
+
+
+
+/*  ----------------------------------
+    --LAB-2 -- API Gestão de Tarefas--
+    ----------------------------------
+*/
+
+let tasks = [
+    { id: 1, title: "Estudar Node.js", completed: false, priority: "high" },
+    { id: 2, title: "Fazer LAB-1", completed: true, priority: "medium" }
+];
+
+//GET - Lista todas (+ filtra por estado)
+
+app.get("/tasks", (req, res) => {
+    const { completed } = req.query;
+
+
+    if (completed === undefined) {
+        return res.status(200).json({ data: tasks });
+    }
+
+    if (completed !== "true" && completed !== "false") {
+        return res.status(400).json({ message: "O parâmetro do query só pode ser 'true' ou 'false'"});
+    }
+
+    const filteredTasks = tasks.filter((findTasks) => findTasks.completed === "true");
+
+    res.status(200).json({ data: filteredTasks });
+});
+
+//GET - mostra um
+
+app.get("/tasks/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const task = tasks.find((findTask) => findTask.id === id);
+
+    if (!task) {
+        return res.status(404).json({ message: "Tarefa não encontrada"});
+    }
+
+    res.status(200).json({ data: task});
+});
+
 
 
 
