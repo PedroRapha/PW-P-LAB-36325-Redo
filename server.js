@@ -193,7 +193,6 @@ let tasks = [
 app.get("/tasks", (req, res) => {
     const { completed } = req.query;
 
-
     if (completed === undefined) {
         return res.status(200).json({ data: tasks });
     }
@@ -352,16 +351,50 @@ const prisma = new PrismaClient({ adapter });
 //GET - listar todas
 
 app.get("/prisma/tasks", async (req, res) => {
-    const tasks = await prisma.task.findMany();
-    res.status(200).json(tasks);
+    const { completed } = req.query;
+
+    if(completed === undefined) {
+        const tasks = await prisma.task.findMany();
+        return res.status(200).json(tasks);
+    }
+
+    if(completed !== "true" && completed !== "false") {
+        return res.status(400).json({ message: "O campo 'completed' só pode receber 'true' ou 'false'"});
+    }
+
+    const filteredTasks = await prisma.task.findMany({
+        where: { completed: completed === " " },
+    });
+
+    res.status(200).json(filteredTasks);
 });
+
+//GET stats
+
+app.get("/prisma/tasks/stats", async (req, res) => {
+    const stats = {quantity, completed, incomplete};
+    stats.quantity = await prisma.task.count();
+    stats.completed = await prisma.task.count( {
+        where: { completed: true },
+    });
+    stats.incomplete = await prisma.task.count( {
+        where: { completed: false },
+    });
+
+    res.status(200).json({ "stats:": stats });
+})
 
 //GET - listar uma
 
-app.get("/prisma/tasks", async (req, res) => {
+app.get("/prisma/tasks/:id", async (req, res) => {
     const task = await prisma.task.findUnique({
         where: { id: req.params.id },
     });
+
+    if(!task) {
+        return res.status(404).json({ message: "Tarefa não encontrada" });
+    }
+
     res.status(200).json(task);
 });
 
@@ -369,28 +402,78 @@ app.get("/prisma/tasks", async (req, res) => {
 
 app.post("/prisma/tasks", async (req, res) => {
     const { title, description } = req.body;
+
+    if(!title){
+        return res.status(400).json({ message: "O campo 'title' é obrigatório"})
+    }
+
     const newTask = await prisma.task.create({ data: { title, description },
     });
+
     res.status(201).json(newTask);
 })
 
 //PUT - atualizar
 
 app.put("/prisma/tasks/:id", async (req, res) => {
+    const id = req.params.id;
     const { title, description, completed } = req.body;
+
+    const task = await prisma.task.findUnique({
+        where: { id: id },
+    })
+
+    if(!task) {
+        return res.status(404).json({ message: "Tarefa não encontrada" });
+    }
+
+    if(!title) {
+        return res.status(400).json({ message: "O campo 'title' é obrigatório" });
+    }
+
     const updatedTask = await prisma.task.update({
-        where: { id: req.params.id },
+        where: { id: id },
         data: { title, description, completed },
     });
+
     res.status(200).json(updatedTask);
+})
+
+//PATCH - alternar
+app.patch("/prisma/tasks/:id/toggle", async (req, res) => {
+    const id = req.params.id;
+    const task = await prisma.task.findUnique({
+        where: {id: id },
+    });
+
+    if(!task) {
+        return res.status(404).json({ message: "Tarefa não encontrada" });
+    }
+
+    const updatedTask = await prisma.task.update({
+        where: { id: id },
+        data: {completed: !task.completed },
+    })
+
+    return res.status(200).json(updatedTask);
 })
 
 //DELETE - apagar
 
 app.delete("/prisma/tasks/:id", async (req, res) => {
-    await prisma.task.delete({
-        where: { id: req.params.id },
+    const id = req.params.id;
+    const task = await prisma.task.findUnique({
+        where: {id: id},
     });
+
+    if(!task) {
+        return(404).json({ message: "Tarefa não encontrada" });
+    }
+
+    await prisma.task.delete({
+        where: { id: id },
+    });
+
     res.status(204).send();
 })
 
