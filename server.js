@@ -281,7 +281,7 @@ app.put("/tasks/:id", (req, res) => {
         return res.status(400).json({ message: "Os campos 'title' e 'priority' são obrigatórios"});
     }
 
-    if(priority !== "low" && priority !== "medium" && priority !== "high"){
+    if(priority !== undefined &&priority !== "low" && priority !== "medium" && priority !== "high"){
         return res.status(400).json({ message: "O campo 'priority' só pode receber 'low', 'medium' ou 'high'" });
     }
 
@@ -363,7 +363,7 @@ app.get("/prisma/tasks", async (req, res) => {
     }
 
     const filteredTasks = await prisma.task.findMany({
-        where: { completed: completed === " " },
+        where: { completed: completed === "true" },
     });
 
     res.status(200).json(filteredTasks);
@@ -372,7 +372,12 @@ app.get("/prisma/tasks", async (req, res) => {
 //GET stats
 
 app.get("/prisma/tasks/stats", async (req, res) => {
-    const stats = {quantity, completed, incomplete};
+    const stats = {
+        quantity: 0,
+        completed: 0,
+        incomplete: 0
+    };
+
     stats.quantity = await prisma.task.count();
     stats.completed = await prisma.task.count( {
         where: { completed: true },
@@ -381,8 +386,8 @@ app.get("/prisma/tasks/stats", async (req, res) => {
         where: { completed: false },
     });
 
-    res.status(200).json({ "stats:": stats });
-})
+    res.status(200).json({ stats: stats });
+});
 
 //GET - listar uma
 
@@ -401,13 +406,17 @@ app.get("/prisma/tasks/:id", async (req, res) => {
 //POST - criar
 
 app.post("/prisma/tasks", async (req, res) => {
-    const { title, description } = req.body;
+    const { title, description, priority } = req.body;
 
     if(!title){
-        return res.status(400).json({ message: "O campo 'title' é obrigatório"})
+        return res.status(400).json({ message: "O campo 'title' é obrigatório" });
     }
 
-    const newTask = await prisma.task.create({ data: { title, description },
+    if(priority !== undefined && priority !== "low" && priority !== "medium" && priority !== "high") {
+        return res.status(400).json({ message: "O campo 'priority' só pode receber 'low', 'medium' ou 'high'" });
+    }
+
+    const newTask = await prisma.task.create({ data: { title, description, priority },
     });
 
     res.status(201).json(newTask);
@@ -417,7 +426,7 @@ app.post("/prisma/tasks", async (req, res) => {
 
 app.put("/prisma/tasks/:id", async (req, res) => {
     const id = req.params.id;
-    const { title, description, completed } = req.body;
+    const { title, description, completed, priority } = req.body;
 
     const task = await prisma.task.findUnique({
         where: { id: id },
@@ -431,9 +440,13 @@ app.put("/prisma/tasks/:id", async (req, res) => {
         return res.status(400).json({ message: "O campo 'title' é obrigatório" });
     }
 
+    if(priority !== undefined && priority !== "low" && priority !== "medium" && priority !== "high") {
+        return res.status(400).json({ message: "O campo 'priority' só pode receber 'low', 'medium' ou 'high'" });
+    }
+
     const updatedTask = await prisma.task.update({
         where: { id: id },
-        data: { title, description, completed },
+        data: { title, description, completed, priority },
     });
 
     res.status(200).json(updatedTask);
@@ -467,7 +480,7 @@ app.delete("/prisma/tasks/:id", async (req, res) => {
     });
 
     if(!task) {
-        return(404).json({ message: "Tarefa não encontrada" });
+        return res.status(404).json({ message: "Tarefa não encontrada" });
     }
 
     await prisma.task.delete({
