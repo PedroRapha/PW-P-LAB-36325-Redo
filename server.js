@@ -17,6 +17,11 @@ app.use(morgan("dev"));
 
 const PORT = process.env.SERVER_PORT || 3000;
 
+/*  --------------------------------------------
+    --LAB-4 -- Autenticação e Rotas Protegidas--
+    --------------------------------------------
+*/
+
 //rota de registo(sign up):
 app.post("/auth/signup", async (req, res) => {
     const { name, email, password } = req.body;
@@ -574,6 +579,17 @@ app.delete("/prisma/tasks/:id", authenticateToken, async (req, res) => {
 
     res.status(204).send();
 })
+
+//LAB4: extra
+app.get("/auth/profile", authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({ where: { id: userId }});
+    res.status(200).json({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+    });
+});
 
 //Middleware de Erros
 app.use((req,res) => {
