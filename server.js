@@ -1,3 +1,4 @@
+//imports
 require("dotenv").config();
 
 const express = require("express");
@@ -6,11 +7,95 @@ const morgan = require("morgan");
 
 const app = express();
 
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
+//middleware globais
 app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
 const PORT = process.env.SERVER_PORT || 3000;
+
+//rota de registo(sign up):
+app.post("/auth/signup", async (req, res) => {
+    const { name, email, password } = req.body;
+
+    //validação
+    if (!name || !email || !password) {
+        return res.status(400).json({ message: "Campos 'name', 'email' e 'password' são obrigatórios" });
+    }
+
+    //duplicado?
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+        return res.status(409).json({ message: "Email já registado" });
+    }
+
+    //.hash transforma em hash seguro. O 10 aqui é o salt rounds. Quanto maior, mais seguro, mas mais lento. Salt é um tipo de dado que ajuda na encriptação
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    //cria user com a pass encriptada
+    const newUser = await prisma.user.create({
+        data: { name, email, password: hashedPassword },
+    });
+
+    //retorna dados do user sem a password
+    res.status(201).json({
+        id: newUser.id,
+        name: newUser.name,
+        email:newUser.email,
+    });
+});
+
+//rota de login (signin)
+app.post("/auth/signin", async (req, res) => {
+    const { email, password } = req.body;
+
+    //validação de inserção
+    if(!email || !password) {
+        return res.status(400).json({ message: "Campos 'email' e 'password' são obrigatórios" });
+    }
+
+    //valida se email existe
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user){
+        return res.status(401).json({ message: "Credenciais inválidas" });
+    }
+
+    //valida se password está correta (é importante não dizer qual credencial está errada)
+    const validPassword = await bcrypt.compare(password, user.password);
+    if(!validPassword) {
+        return res.status(401).json({ message: "Credenciais inválidas" });
+    }
+
+    //gera token
+    const token = jwt.sign(
+        { id: user.id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+    );
+
+    res.status(200).json({ token });
+});
+
+//middleware de autenticação:
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if(!token) {
+        return res.status(401).json({ message: "Token não fornecido" });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: "Token inválido" });
+        }
+        req.user = user;
+        next();
+    });
+};
 
 /*  ----------------------------------
     ------EXEMPLO - CRUD com Mock-----
@@ -350,7 +435,7 @@ const prisma = new PrismaClient({ adapter });
 
 //GET - listar todas
 
-app.get("/prisma/tasks", async (req, res) => {
+app.get("/prisma/tasks", authenticateToken, async (req, res) => {
     const { completed } = req.query;
 
     if(completed === undefined) {
@@ -371,7 +456,7 @@ app.get("/prisma/tasks", async (req, res) => {
 
 //GET stats
 
-app.get("/prisma/tasks/stats", async (req, res) => {
+app.get("/prisma/tasks/stats", authenticateToken, async (req, res) => {
     const stats = {
         quantity: 0,
         completed: 0,
@@ -391,7 +476,7 @@ app.get("/prisma/tasks/stats", async (req, res) => {
 
 //GET - listar uma
 
-app.get("/prisma/tasks/:id", async (req, res) => {
+app.get("/prisma/tasks/:id", authenticateToken, async (req, res) => {
     const task = await prisma.task.findUnique({
         where: { id: req.params.id },
     });
@@ -405,7 +490,7 @@ app.get("/prisma/tasks/:id", async (req, res) => {
 
 //POST - criar
 
-app.post("/prisma/tasks", async (req, res) => {
+app.post("/prisma/tasks", authenticateToken, async (req, res) => {
     const { title, description, priority } = req.body;
 
     if(!title){
@@ -424,7 +509,7 @@ app.post("/prisma/tasks", async (req, res) => {
 
 //PUT - atualizar
 
-app.put("/prisma/tasks/:id", async (req, res) => {
+app.put("/prisma/tasks/:id", authenticateToken, async (req, res) => {
     const id = req.params.id;
     const { title, description, completed, priority } = req.body;
 
@@ -453,7 +538,7 @@ app.put("/prisma/tasks/:id", async (req, res) => {
 })
 
 //PATCH - alternar
-app.patch("/prisma/tasks/:id/toggle", async (req, res) => {
+app.patch("/prisma/tasks/:id/toggle", authenticateToken, async (req, res) => {
     const id = req.params.id;
     const task = await prisma.task.findUnique({
         where: {id: id },
@@ -473,7 +558,7 @@ app.patch("/prisma/tasks/:id/toggle", async (req, res) => {
 
 //DELETE - apagar
 
-app.delete("/prisma/tasks/:id", async (req, res) => {
+app.delete("/prisma/tasks/:id", authenticateToken, async (req, res) => {
     const id = req.params.id;
     const task = await prisma.task.findUnique({
         where: {id: id},
