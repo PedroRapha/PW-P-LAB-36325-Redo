@@ -11,7 +11,9 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 //middleware globais
-app.use(cors());
+app.use(cors({
+    origin: '*', //isto só pode ser usado em DESENVOLVIMENTO, pois aceita qualquer origem. Em produção, deve ser substituído pelo URL real do frontend, ex 'https://meusite.com'
+}));
 app.use(express.json());
 app.use(morgan("dev"));
 
